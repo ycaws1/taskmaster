@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+    trustHost: true,
     providers: [
         Credentials({
             credentials: {
@@ -19,13 +20,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
         }),
     ],
+    session: {
+        strategy: "jwt",
+    },
     pages: {
         signIn: "/login",
     },
     callbacks: {
         authorized: async ({ auth }) => {
             console.log("Middleware authorized callback. User:", auth?.user?.email);
-            // Logged in users are authenticated, otherwise redirect to login page
             return !!auth
         },
     },
