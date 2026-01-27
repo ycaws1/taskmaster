@@ -1,0 +1,80 @@
+'use client';
+
+import { toggleTodo, deleteTodo, updateTodoText } from '@/app/lib/actions';
+import { Trash2, CheckCircle, Circle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
+
+interface TodoItemProps {
+    todo: {
+        id: string;
+        text: string;
+        completed: boolean;
+    };
+}
+
+export function TodoItem({ todo }: TodoItemProps) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [text, setText] = useState(todo.text);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isEditing]);
+
+    const handleUpdate = async () => {
+        setIsEditing(false);
+        if (text !== todo.text) {
+            await updateTodoText(todo.id, text);
+        }
+    };
+
+    return (
+        <div className="group flex items-center justify-between gap-3 rounded-lg bg-white/50 p-3 shadow-sm backdrop-blur-sm transition-all hover:bg-white/80 dark:bg-zinc-800/50 dark:hover:bg-zinc-800/80">
+            <div className="flex flex-1 items-center gap-3">
+                <button
+                    onClick={() => toggleTodo(todo.id, !todo.completed)}
+                    className={`flex-shrink-0 transition-colors ${todo.completed ? 'text-green-500' : 'text-zinc-400 hover:text-zinc-600'
+                        }`}
+                >
+                    {todo.completed ? (
+                        <CheckCircle className="h-5 w-5" />
+                    ) : (
+                        <Circle className="h-5 w-5" />
+                    )}
+                </button>
+
+                {isEditing ? (
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        onBlur={handleUpdate}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleUpdate();
+                        }}
+                        className="w-full bg-transparent text-sm text-zinc-900 focus:outline-none dark:text-zinc-100"
+                    />
+                ) : (
+                    <span
+                        onClick={() => setIsEditing(true)}
+                        className={`cursor-pointer text-sm transition-all ${todo.completed ? 'text-zinc-400 function line-through' : 'text-zinc-900 dark:text-zinc-100'
+                            }`}
+                    >
+                        {todo.text}
+                    </span>
+                )}
+            </div>
+
+            <button
+                onClick={() => deleteTodo(todo.id)}
+                className="opacity-0 transition-opacity group-hover:opacity-100 text-red-500 hover:text-red-600"
+            >
+                <Trash2 className="h-4 w-4" />
+            </button>
+        </div>
+    );
+}
