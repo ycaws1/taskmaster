@@ -24,6 +24,11 @@ export function TodoItem({ todo, isHighlighted = false }: TodoItemProps) {
         }
     }, [isEditing]);
 
+    // Sync text with props when todo changes from server
+    useEffect(() => {
+        setText(todo.text);
+    }, [todo.text]);
+
     const handleUpdate = async () => {
         setIsEditing(false);
         if (text !== todo.text) {
@@ -33,8 +38,8 @@ export function TodoItem({ todo, isHighlighted = false }: TodoItemProps) {
 
     return (
         <div className={`group flex items-center justify-between gap-3 rounded-lg p-3 shadow-sm backdrop-blur-sm transition-all ${isHighlighted
-                ? 'bg-indigo-100 ring-2 ring-indigo-500 scale-[1.02] dark:bg-indigo-900/50'
-                : 'bg-white/50 hover:bg-white/80 dark:bg-zinc-800/50 dark:hover:bg-zinc-800/80'
+            ? 'bg-indigo-100 ring-2 ring-indigo-500 scale-[1.02] dark:bg-indigo-900/50'
+            : 'bg-white/50 hover:bg-white/80 dark:bg-zinc-800/50 dark:hover:bg-zinc-800/80'
             }`}>
             <div className="flex flex-1 items-center gap-3">
                 <button
@@ -65,13 +70,13 @@ export function TodoItem({ todo, isHighlighted = false }: TodoItemProps) {
                     <span
                         onClick={() => setIsEditing(true)}
                         className={`cursor-pointer text-sm transition-all ${isHighlighted
-                                ? 'text-indigo-900 font-semibold dark:text-indigo-100'
-                                : todo.completed
-                                    ? 'text-zinc-400 line-through'
-                                    : 'text-zinc-900 dark:text-zinc-100'
+                            ? 'text-indigo-900 font-semibold dark:text-indigo-100'
+                            : todo.completed
+                                ? 'text-zinc-400 line-through'
+                                : 'text-zinc-900 dark:text-zinc-100'
                             }`}
                     >
-                        {todo.text}
+                        {text}
                     </span>
                 )}
             </div>

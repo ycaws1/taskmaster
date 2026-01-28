@@ -239,7 +239,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
                             }}
                             title="Click to edit"
                         >
-                            {category.name}
+                            {categoryName}
                             <Pencil className="h-3 w-3 opacity-0 group-hover/title:opacity-50 transition-opacity" />
                         </h3>
                     )}
