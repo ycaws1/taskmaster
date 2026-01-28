@@ -14,6 +14,7 @@ interface Category {
         id: string;
         text: string;
         completed: boolean;
+        order: number;
     }[];
 }
 
