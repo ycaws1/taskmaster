@@ -118,13 +118,13 @@ export function Dashboard({ categories, user }: DashboardProps) {
 
                 {/* Categories Grid/List */}
                 <div className={`
-          ${viewMode === 'grid'
-                        ? 'grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'
-                        : 'flex flex-col gap-6'
+                    ${viewMode === 'grid'
+                        ? 'grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3'
+                        : 'flex flex-col gap-4 sm:gap-6'
                     }
-        `}>
+                `}>
                     {categories.map((category) => (
-                        <div key={category.id} className={`${viewMode === 'grid' ? 'h-[400px]' : 'h-auto'}`}>
+                        <div key={category.id} className={`${viewMode === 'grid' ? 'h-auto sm:h-[400px]' : 'h-auto'}`}>
                             <CategoryCard category={category} />
                         </div>
                     ))}
