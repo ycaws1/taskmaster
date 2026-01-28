@@ -9,13 +9,15 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Category {
   id        String     @id @default(cuid())
   name      String
+  order     Int        @default(0)
   items     TodoItem[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -25,6 +27,7 @@ model TodoItem {
   id         String   @id @default(cuid())
   text       String
   completed  Boolean  @default(false)
+  order      Int      @default(0)
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())

@@ -1,19 +1,22 @@
 'use client';
 
-import { createTodo, deleteCategory } from '@/app/lib/actions';
+import { createTodo, deleteCategory, reorderTodos, updateCategoryName } from '@/app/lib/actions';
 import { TodoItem } from './TodoItem';
-import { Plus, Trash2, ChevronDown, ChevronRight, Shuffle } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, Trash2, ChevronDown, ChevronRight, Shuffle, GripVertical, Pencil } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+
+interface TodoItemType {
+    id: string;
+    text: string;
+    completed: boolean;
+    order: number;
+}
 
 interface CategoryCardProps {
     category: {
         id: string;
         name: string;
-        items: {
-            id: string;
-            text: string;
-            completed: boolean;
-        }[];
+        items: TodoItemType[];
     };
 }
 
@@ -23,6 +26,48 @@ export function CategoryCard({ category }: CategoryCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [isSpinning, setIsSpinning] = useState(false);
+
+    // Category name editing state
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [categoryName, setCategoryName] = useState(category.name);
+    const nameInputRef = useRef<HTMLInputElement>(null);
+
+    // Focus input when editing starts
+    useEffect(() => {
+        if (isEditingName && nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.select();
+        }
+    }, [isEditingName]);
+
+    // Sync category name with props
+    useEffect(() => {
+        setCategoryName(category.name);
+    }, [category.name]);
+
+    const handleNameUpdate = async () => {
+        setIsEditingName(false);
+        const trimmedName = categoryName.trim();
+        if (trimmedName && trimmedName !== category.name) {
+            await updateCategoryName(category.id, trimmedName);
+        } else {
+            setCategoryName(category.name); // Reset if empty or unchanged
+        }
+    };
+
+    // Drag and drop state for items
+    const [items, setItems] = useState(category.items);
+    const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+    const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+    const dragCounter = useRef(0);
+
+    // Sync items with props when category changes
+    const itemsKey = category.items.map(i => i.id).join(',');
+    const [prevItemsKey, setPrevItemsKey] = useState(itemsKey);
+    if (itemsKey !== prevItemsKey) {
+        setPrevItemsKey(itemsKey);
+        setItems(category.items);
+    }
 
     const handleAddTodo = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,7 +81,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
 
     const handleRandomPick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        const uncompletedItems = category.items.filter(item => !item.completed);
+        const uncompletedItems = items.filter(item => !item.completed);
         if (uncompletedItems.length === 0) return;
 
         setIsSpinning(true);
@@ -65,12 +110,95 @@ export function CategoryCard({ category }: CategoryCardProps) {
         }, 100);
     };
 
-    const completedCount = category.items.filter(item => item.completed).length;
-    const totalCount = category.items.length;
+    // Drag handlers for items
+    const handleDragStart = useCallback((e: React.DragEvent, itemId: string) => {
+        e.stopPropagation(); // Prevent category drag
+        setDraggedItemId(itemId);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', itemId);
+        e.dataTransfer.setData('application/x-todo-item', 'true');
+
+        const target = e.currentTarget as HTMLElement;
+        setTimeout(() => {
+            target.style.opacity = '0.5';
+        }, 0);
+    }, []);
+
+    const handleDragEnd = useCallback((e: React.DragEvent) => {
+        const target = e.currentTarget as HTMLElement;
+        target.style.opacity = '1';
+        setDraggedItemId(null);
+        setDragOverItemId(null);
+        dragCounter.current = 0;
+    }, []);
+
+    const handleDragEnter = useCallback((e: React.DragEvent, itemId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Only handle if this is a todo item drag
+        if (!e.dataTransfer.types.includes('application/x-todo-item')) return;
+
+        dragCounter.current++;
+        if (itemId !== draggedItemId) {
+            setDragOverItemId(itemId);
+        }
+    }, [draggedItemId]);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current--;
+        if (dragCounter.current === 0) {
+            setDragOverItemId(null);
+        }
+    }, []);
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+    }, []);
+
+    const handleDrop = useCallback(async (e: React.DragEvent, targetId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current = 0;
+
+        // Only handle if this is a todo item drag
+        if (!e.dataTransfer.types.includes('application/x-todo-item')) return;
+
+        const sourceId = e.dataTransfer.getData('text/plain');
+        if (sourceId === targetId) {
+            setDraggedItemId(null);
+            setDragOverItemId(null);
+            return;
+        }
+
+        // Find indices
+        const sourceIndex = items.findIndex(i => i.id === sourceId);
+        const targetIndex = items.findIndex(i => i.id === targetId);
+
+        if (sourceIndex === -1 || targetIndex === -1) return;
+
+        // Create new order (optimistic update)
+        const newItems = [...items];
+        const [removed] = newItems.splice(sourceIndex, 1);
+        newItems.splice(targetIndex, 0, removed);
+
+        setItems(newItems);
+        setDraggedItemId(null);
+        setDragOverItemId(null);
+
+        // Save to server
+        await reorderTodos(category.id, newItems.map(i => i.id));
+    }, [items, category.id]);
+
+    const completedCount = items.filter(item => item.completed).length;
+    const totalCount = items.length;
     const uncompletedCount = totalCount - completedCount;
 
     return (
-        <div className="group flex flex-col rounded-xl border border-zinc-200 bg-zinc-50/50 shadow-sm backdrop-blur-md transition-all hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900/50">
+        <div className="group flex flex-col rounded-xl border border-zinc-200 bg-zinc-50/50 shadow-sm backdrop-blur-md transition-all hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900/50 h-full">
             {/* Header - Always visible, clickable on mobile */}
             <div
                 className="flex items-center justify-between p-4 cursor-pointer sm:cursor-default"
@@ -85,7 +213,36 @@ export function CategoryCard({ category }: CategoryCardProps) {
                             <ChevronRight className="h-4 w-4" />
                         )}
                     </span>
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{category.name}</h3>
+                    {isEditingName ? (
+                        <input
+                            ref={nameInputRef}
+                            type="text"
+                            value={categoryName}
+                            onChange={(e) => setCategoryName(e.target.value)}
+                            onBlur={handleNameUpdate}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleNameUpdate();
+                                if (e.key === 'Escape') {
+                                    setCategoryName(category.name);
+                                    setIsEditingName(false);
+                                }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-lg font-bold text-zinc-900 dark:text-zinc-100 bg-transparent border-b-2 border-indigo-500 outline-none w-32 sm:w-auto"
+                        />
+                    ) : (
+                        <h3
+                            className="text-lg font-bold text-zinc-900 dark:text-zinc-100 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group/title flex items-center gap-1"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsEditingName(true);
+                            }}
+                            title="Click to edit"
+                        >
+                            {category.name}
+                            <Pencil className="h-3 w-3 opacity-0 group-hover/title:opacity-50 transition-opacity" />
+                        </h3>
+                    )}
                     {/* Item count badge */}
                     <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
                         {completedCount}/{totalCount}
@@ -97,8 +254,8 @@ export function CategoryCard({ category }: CategoryCardProps) {
                         onClick={handleRandomPick}
                         disabled={uncompletedCount === 0 || isSpinning}
                         className={`rounded-lg p-1.5 transition-all disabled:opacity-30 ${isSpinning
-                                ? 'animate-spin text-indigo-500'
-                                : 'text-zinc-400 hover:bg-indigo-50 hover:text-indigo-500 dark:text-zinc-500 dark:hover:bg-indigo-900/20'
+                            ? 'animate-spin text-indigo-500'
+                            : 'text-zinc-400 hover:bg-indigo-50 hover:text-indigo-500 dark:text-zinc-500 dark:hover:bg-indigo-900/20'
                             }`}
                         title="Pick random task"
                     >
@@ -124,15 +281,38 @@ export function CategoryCard({ category }: CategoryCardProps) {
                 sm:max-h-none sm:opacity-100
             `}>
                 <div className="flex-1 space-y-2 overflow-y-auto px-4 pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-700">
-                    {category.items.length === 0 ? (
+                    {items.length === 0 ? (
                         <div className="py-4 text-center text-sm text-zinc-400 italic">No tasks yet</div>
                     ) : (
-                        category.items.map((todo) => (
-                            <TodoItem
+                        items.map((todo) => (
+                            <div
                                 key={todo.id}
-                                todo={todo}
-                                isHighlighted={selectedId === todo.id}
-                            />
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, todo.id)}
+                                onDragEnd={handleDragEnd}
+                                onDragEnter={(e) => handleDragEnter(e, todo.id)}
+                                onDragLeave={handleDragLeave}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, todo.id)}
+                                className={`
+                                    relative transition-all
+                                    ${draggedItemId === todo.id ? 'opacity-50' : ''}
+                                    ${dragOverItemId === todo.id ? 'ring-2 ring-indigo-500 ring-offset-1 rounded-lg' : ''}
+                                `}
+                            >
+                                <div className="flex items-center gap-1">
+                                    {/* Drag handle */}
+                                    <div className="cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 flex-shrink-0">
+                                        <GripVertical className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <TodoItem
+                                            todo={todo}
+                                            isHighlighted={selectedId === todo.id}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         ))
                     )}
                 </div>

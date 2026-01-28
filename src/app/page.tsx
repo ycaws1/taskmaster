@@ -11,18 +11,23 @@ export default async function Home() {
   const categories = await prisma.category.findMany({
     include: {
       items: {
-        orderBy: { createdAt: 'desc' }
+        orderBy: { order: 'asc' }
       }
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { order: 'asc' }
   });
 
   const serializedCategories = categories.map((cat: Category & { items: TodoItem[] }) => ({
-    ...cat,
+    id: cat.id,
+    name: cat.name,
+    order: (cat as any).order ?? 0,
     createdAt: cat.createdAt.toISOString(),
     updatedAt: cat.updatedAt.toISOString(),
     items: cat.items.map((item: TodoItem) => ({
-      ...item,
+      id: item.id,
+      text: item.text,
+      completed: item.completed,
+      order: (item as any).order ?? 0,
       createdAt: item.createdAt.toISOString(),
       updatedAt: item.updatedAt.toISOString(),
     }))

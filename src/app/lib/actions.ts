@@ -32,9 +32,28 @@ export async function authenticate(
 
 // Category Actions
 export async function createCategory(name: string) {
-    await prisma.category.create({
-        data: { name },
+    // Get the current max order
+    const maxOrderResult = await prisma.category.aggregate({
+        _max: { order: true }
     })
+    const newOrder = (maxOrderResult._max.order ?? -1) + 1
+
+    await prisma.category.create({
+        data: { name, order: newOrder },
+    })
+    revalidatePath('/')
+}
+
+export async function reorderCategories(orderedIds: string[]) {
+    // Update each category with its new order
+    await prisma.$transaction(
+        orderedIds.map((id, index) =>
+            prisma.category.update({
+                where: { id },
+                data: { order: index }
+            })
+        )
+    )
     revalidatePath('/')
 }
 
@@ -45,11 +64,39 @@ export async function deleteCategory(id: string) {
     revalidatePath('/')
 }
 
+export async function updateCategoryName(id: string, name: string) {
+    await prisma.category.update({
+        where: { id },
+        data: { name },
+    })
+    revalidatePath('/')
+}
+
 // Todo Actions
 export async function createTodo(text: string, categoryId: string) {
-    await prisma.todoItem.create({
-        data: { text, categoryId },
+    // Get the current max order for this category
+    const maxOrderResult = await prisma.todoItem.aggregate({
+        where: { categoryId },
+        _max: { order: true }
     })
+    const newOrder = (maxOrderResult._max.order ?? -1) + 1
+
+    await prisma.todoItem.create({
+        data: { text, categoryId, order: newOrder },
+    })
+    revalidatePath('/')
+}
+
+export async function reorderTodos(categoryId: string, orderedIds: string[]) {
+    // Update each todo with its new order
+    await prisma.$transaction(
+        orderedIds.map((id, index) =>
+            prisma.todoItem.update({
+                where: { id },
+                data: { order: index }
+            })
+        )
+    )
     revalidatePath('/')
 }
 

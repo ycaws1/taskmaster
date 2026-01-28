@@ -1,20 +1,43 @@
 'use client';
 
-import { createCategory } from '@/app/lib/actions';
+import { createCategory, reorderCategories } from '@/app/lib/actions';
 import { CategoryCard } from './CategoryCard';
-import { Plus, LogOut, LayoutGrid, List } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, LogOut, LayoutGrid, List, GripVertical } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
 import { signOut } from 'next-auth/react';
 
+interface Category {
+    id: string;
+    name: string;
+    order: number;
+    items: {
+        id: string;
+        text: string;
+        completed: boolean;
+    }[];
+}
+
 interface DashboardProps {
-    categories: any[];
+    categories: Category[];
     user: any;
 }
 
-export function Dashboard({ categories, user }: DashboardProps) {
+export function Dashboard({ categories: initialCategories, user }: DashboardProps) {
     const [newCategoryName, setNewCategoryName] = useState('');
     const [showAddCategory, setShowAddCategory] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [categories, setCategories] = useState(initialCategories);
+    const [draggedId, setDraggedId] = useState<string | null>(null);
+    const [dragOverId, setDragOverId] = useState<string | null>(null);
+    const dragCounter = useRef(0);
+
+    // Sync with server-side categories when they change
+    const categoriesKey = initialCategories.map(c => c.id).join(',');
+    const [prevCategoriesKey, setPrevCategoriesKey] = useState(categoriesKey);
+    if (categoriesKey !== prevCategoriesKey) {
+        setPrevCategoriesKey(categoriesKey);
+        setCategories(initialCategories);
+    }
 
     const handleCreateCategory = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,6 +47,77 @@ export function Dashboard({ categories, user }: DashboardProps) {
         setNewCategoryName('');
         setShowAddCategory(false);
     };
+
+    const handleDragStart = useCallback((e: React.DragEvent, categoryId: string) => {
+        setDraggedId(categoryId);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', categoryId);
+
+        // Add a slight delay for the drag image
+        const target = e.currentTarget as HTMLElement;
+        setTimeout(() => {
+            target.style.opacity = '0.5';
+        }, 0);
+    }, []);
+
+    const handleDragEnd = useCallback((e: React.DragEvent) => {
+        const target = e.currentTarget as HTMLElement;
+        target.style.opacity = '1';
+        setDraggedId(null);
+        setDragOverId(null);
+        dragCounter.current = 0;
+    }, []);
+
+    const handleDragEnter = useCallback((e: React.DragEvent, categoryId: string) => {
+        e.preventDefault();
+        dragCounter.current++;
+        if (categoryId !== draggedId) {
+            setDragOverId(categoryId);
+        }
+    }, [draggedId]);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        dragCounter.current--;
+        if (dragCounter.current === 0) {
+            setDragOverId(null);
+        }
+    }, []);
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }, []);
+
+    const handleDrop = useCallback(async (e: React.DragEvent, targetId: string) => {
+        e.preventDefault();
+        dragCounter.current = 0;
+
+        const sourceId = e.dataTransfer.getData('text/plain');
+        if (sourceId === targetId) {
+            setDraggedId(null);
+            setDragOverId(null);
+            return;
+        }
+
+        // Find indices
+        const sourceIndex = categories.findIndex(c => c.id === sourceId);
+        const targetIndex = categories.findIndex(c => c.id === targetId);
+
+        if (sourceIndex === -1 || targetIndex === -1) return;
+
+        // Create new order (optimistic update)
+        const newCategories = [...categories];
+        const [removed] = newCategories.splice(sourceIndex, 1);
+        newCategories.splice(targetIndex, 0, removed);
+
+        setCategories(newCategories);
+        setDraggedId(null);
+        setDragOverId(null);
+
+        // Save to server
+        await reorderCategories(newCategories.map(c => c.id));
+    }, [categories]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 text-zinc-900 dark:from-zinc-950 dark:to-black dark:text-zinc-50">
@@ -83,7 +177,12 @@ export function Dashboard({ categories, user }: DashboardProps) {
             {/* Main Content */}
             <main className="mx-auto max-w-7xl p-4 sm:p-6">
                 <div className="mb-6 flex items-center justify-between sm:mb-8">
-                    <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Categories</h2>
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Categories</h2>
+                        <span className="rounded-md bg-zinc-200/70 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                            Drag to reorder
+                        </span>
+                    </div>
                     <button
                         onClick={() => setShowAddCategory(!showAddCategory)}
                         className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all hover:bg-indigo-700 hover:shadow-indigo-500/40 active:scale-95 sm:gap-2 sm:px-4"
@@ -124,7 +223,26 @@ export function Dashboard({ categories, user }: DashboardProps) {
                     }
                 `}>
                     {categories.map((category) => (
-                        <div key={category.id} className={`${viewMode === 'grid' ? 'h-auto sm:h-[400px]' : 'h-auto'}`}>
+                        <div
+                            key={category.id}
+                            className={`
+                                relative
+                                ${viewMode === 'grid' ? 'h-auto sm:h-[400px]' : 'h-auto'}
+                                ${draggedId === category.id ? 'opacity-50' : ''}
+                                ${dragOverId === category.id ? 'ring-2 ring-indigo-500 ring-offset-2 rounded-xl transition-all' : ''}
+                            `}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, category.id)}
+                            onDragEnd={handleDragEnd}
+                            onDragEnter={(e) => handleDragEnter(e, category.id)}
+                            onDragLeave={handleDragLeave}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, category.id)}
+                        >
+                            {/* Drag Handle Indicator */}
+                            <div className="absolute -left-1 top-1/2 -translate-y-1/2 -translate-x-full opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing hidden sm:flex items-center justify-center z-10 pr-2">
+                                <GripVertical className="h-5 w-5 text-zinc-400" />
+                            </div>
                             <CategoryCard category={category} />
                         </div>
                     ))}
