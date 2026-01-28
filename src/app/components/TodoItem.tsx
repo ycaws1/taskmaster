@@ -17,6 +17,7 @@ interface TodoItemProps {
 export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [text, setText] = useState(todo.text);
+    const [completed, setCompleted] = useState(todo.completed);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -32,6 +33,11 @@ export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProp
         setText(todo.text);
     }, [todo.text]);
 
+    // Sync completed status with props when todo changes from server
+    useEffect(() => {
+        setCompleted(todo.completed);
+    }, [todo.completed]);
+
     const handleUpdate = async () => {
         setIsEditing(false);
         if (text !== todo.text) {
@@ -39,6 +45,14 @@ export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProp
             await updateTodoText(todo.id, text);
             setIsUpdating(false);
         }
+    };
+
+    const handleToggle = async () => {
+        // Optimistically update UI
+        const newCompleted = !completed;
+        setCompleted(newCompleted);
+        // Update server in background
+        await toggleTodo(todo.id, newCompleted);
     };
 
     const handleDelete = async () => {
@@ -55,11 +69,11 @@ export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProp
             }`}>
             <div className="flex flex-1 items-center gap-3">
                 <button
-                    onClick={() => toggleTodo(todo.id, !todo.completed)}
-                    className={`flex-shrink-0 transition-colors ${todo.completed ? 'text-green-500' : 'text-zinc-400 hover:text-zinc-600'
+                    onClick={handleToggle}
+                    className={`flex-shrink-0 transition-colors ${completed ? 'text-green-500' : 'text-zinc-400 hover:text-zinc-600'
                         }`}
                 >
-                    {todo.completed ? (
+                    {completed ? (
                         <CheckCircle className="h-5 w-5" />
                     ) : (
                         <Circle className="h-5 w-5" />
@@ -84,7 +98,7 @@ export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProp
                             onClick={() => setIsEditing(true)}
                             className={`cursor-pointer text-sm transition-all ${isHighlighted
                                 ? 'text-indigo-900 font-semibold dark:text-indigo-100'
-                                : todo.completed
+                                : completed
                                     ? 'text-zinc-400 line-through'
                                     : 'text-zinc-900 dark:text-zinc-100'
                                 }`}
