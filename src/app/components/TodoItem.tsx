@@ -11,9 +11,10 @@ interface TodoItemProps {
         completed: boolean;
     };
     isHighlighted?: boolean;
+    onDelete?: (id: string) => void;
 }
 
-export function TodoItem({ todo, isHighlighted = false }: TodoItemProps) {
+export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [text, setText] = useState(todo.text);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -82,7 +83,10 @@ export function TodoItem({ todo, isHighlighted = false }: TodoItemProps) {
             </div>
 
             <button
-                onClick={() => deleteTodo(todo.id)}
+                onClick={async () => {
+                    await deleteTodo(todo.id);
+                    onDelete?.(todo.id);
+                }}
                 className="rounded-lg p-1.5 text-red-500 transition-all hover:bg-red-50 hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-red-900/20"
             >
                 <Trash2 className="h-4 w-4" />

@@ -81,10 +81,18 @@ export async function createTodo(text: string, categoryId: string) {
     })
     const newOrder = (maxOrderResult._max.order ?? -1) + 1
 
-    await prisma.todoItem.create({
+    const newTodo = await prisma.todoItem.create({
         data: { text, categoryId, order: newOrder },
     })
     revalidatePath('/')
+
+    // Return the created todo so client can optimistically update UI
+    return {
+        id: newTodo.id,
+        text: newTodo.text,
+        completed: newTodo.completed,
+        order: newTodo.order,
+    }
 }
 
 export async function reorderTodos(categoryId: string, orderedIds: string[]) {

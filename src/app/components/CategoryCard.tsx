@@ -74,9 +74,16 @@ export function CategoryCard({ category }: CategoryCardProps) {
         if (!newTodo.trim()) return;
 
         setIsAdding(true);
-        await createTodo(newTodo, category.id);
+        const createdTodo = await createTodo(newTodo, category.id);
+        // Immediately add the new todo to the local state for instant UI update
+        setItems(prevItems => [...prevItems, createdTodo]);
         setNewTodo('');
         setIsAdding(false);
+    };
+
+    const handleDeleteTodo = (id: string) => {
+        // Immediately remove the todo from local state for instant UI update
+        setItems(prevItems => prevItems.filter(item => item.id !== id));
     };
 
     const handleRandomPick = (e: React.MouseEvent) => {
@@ -309,6 +316,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
                                         <TodoItem
                                             todo={todo}
                                             isHighlighted={selectedId === todo.id}
+                                            onDelete={handleDeleteTodo}
                                         />
                                     </div>
                                 </div>
