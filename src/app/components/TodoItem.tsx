@@ -1,7 +1,7 @@
 'use client';
 
 import { toggleTodo, deleteTodo, updateTodoText } from '@/app/lib/actions';
-import { Trash2, CheckCircle, Circle } from 'lucide-react';
+import { Trash2, CheckCircle, Circle, Loader2 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 interface TodoItemProps {
@@ -17,6 +17,8 @@ interface TodoItemProps {
 export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [text, setText] = useState(todo.text);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -33,8 +35,17 @@ export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProp
     const handleUpdate = async () => {
         setIsEditing(false);
         if (text !== todo.text) {
+            setIsUpdating(true);
             await updateTodoText(todo.id, text);
+            setIsUpdating(false);
         }
+    };
+
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        await deleteTodo(todo.id);
+        onDelete?.(todo.id);
+        // Note: setIsDeleting(false) not needed as component will unmount
     };
 
     return (
@@ -68,28 +79,35 @@ export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProp
                         className="w-full bg-transparent text-sm text-zinc-900 focus:outline-none dark:text-zinc-100"
                     />
                 ) : (
-                    <span
-                        onClick={() => setIsEditing(true)}
-                        className={`cursor-pointer text-sm transition-all ${isHighlighted
-                            ? 'text-indigo-900 font-semibold dark:text-indigo-100'
-                            : todo.completed
-                                ? 'text-zinc-400 line-through'
-                                : 'text-zinc-900 dark:text-zinc-100'
-                            }`}
-                    >
-                        {text}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span
+                            onClick={() => setIsEditing(true)}
+                            className={`cursor-pointer text-sm transition-all ${isHighlighted
+                                ? 'text-indigo-900 font-semibold dark:text-indigo-100'
+                                : todo.completed
+                                    ? 'text-zinc-400 line-through'
+                                    : 'text-zinc-900 dark:text-zinc-100'
+                                }`}
+                        >
+                            {text}
+                        </span>
+                        {isUpdating && (
+                            <Loader2 className="h-3 w-3 animate-spin text-indigo-500" />
+                        )}
+                    </div>
                 )}
             </div>
 
             <button
-                onClick={async () => {
-                    await deleteTodo(todo.id);
-                    onDelete?.(todo.id);
-                }}
-                className="rounded-lg p-1.5 text-red-500 transition-all hover:bg-red-50 hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-red-900/20"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="rounded-lg p-1.5 text-red-500 transition-all hover:bg-red-50 hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-red-900/20 disabled:opacity-50"
             >
-                <Trash2 className="h-4 w-4" />
+                {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                    <Trash2 className="h-4 w-4" />
+                )}
             </button>
         </div>
     );

@@ -2,7 +2,7 @@
 
 import { createTodo, deleteCategory, reorderTodos, updateCategoryName } from '@/app/lib/actions';
 import { TodoItem } from './TodoItem';
-import { Plus, Trash2, ChevronDown, ChevronRight, Shuffle, GripVertical, Pencil } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronRight, Shuffle, GripVertical, Pencil, Loader2 } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface TodoItemType {
@@ -30,6 +30,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
     // Category name editing state
     const [isEditingName, setIsEditingName] = useState(false);
     const [categoryName, setCategoryName] = useState(category.name);
+    const [isUpdatingName, setIsUpdatingName] = useState(false);
     const nameInputRef = useRef<HTMLInputElement>(null);
 
     // Focus input when editing starts
@@ -49,7 +50,9 @@ export function CategoryCard({ category }: CategoryCardProps) {
         setIsEditingName(false);
         const trimmedName = categoryName.trim();
         if (trimmedName && trimmedName !== category.name) {
+            setIsUpdatingName(true);
             await updateCategoryName(category.id, trimmedName);
+            setIsUpdatingName(false);
         } else {
             setCategoryName(category.name); // Reset if empty or unchanged
         }
@@ -247,7 +250,11 @@ export function CategoryCard({ category }: CategoryCardProps) {
                             title="Click to edit"
                         >
                             {categoryName}
-                            <Pencil className="h-3 w-3 opacity-0 group-hover/title:opacity-50 transition-opacity" />
+                            {isUpdatingName ? (
+                                <Loader2 className="h-3 w-3 animate-spin text-indigo-500" />
+                            ) : (
+                                <Pencil className="h-3 w-3 opacity-0 group-hover/title:opacity-50 transition-opacity" />
+                            )}
                         </h3>
                     )}
                     {/* Item count badge */}
@@ -339,7 +346,11 @@ export function CategoryCard({ category }: CategoryCardProps) {
                             disabled={isAdding || !newTodo.trim()}
                             className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-indigo-500 hover:bg-indigo-50 disabled:opacity-50 dark:hover:bg-indigo-900/20"
                         >
-                            <Plus className="h-4 w-4" />
+                            {isAdding ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Plus className="h-4 w-4" />
+                            )}
                         </button>
                     </div>
                 </form>
