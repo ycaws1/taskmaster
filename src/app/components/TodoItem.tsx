@@ -12,9 +12,10 @@ interface TodoItemProps {
     };
     isHighlighted?: boolean;
     onDelete?: (id: string) => void;
+    onToggle?: (id: string, completed: boolean) => void;
 }
 
-export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProps) {
+export function TodoItem({ todo, isHighlighted = false, onDelete, onToggle }: TodoItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [text, setText] = useState(todo.text);
     const [completed, setCompleted] = useState(todo.completed);
@@ -51,6 +52,8 @@ export function TodoItem({ todo, isHighlighted = false, onDelete }: TodoItemProp
         // Optimistically update UI
         const newCompleted = !completed;
         setCompleted(newCompleted);
+        // Notify parent for count update
+        onToggle?.(todo.id, newCompleted);
         // Update server in background
         await toggleTodo(todo.id, newCompleted);
     };

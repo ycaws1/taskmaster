@@ -89,6 +89,15 @@ export function CategoryCard({ category }: CategoryCardProps) {
         setItems(prevItems => prevItems.filter(item => item.id !== id));
     };
 
+    const handleToggleTodo = (id: string, completed: boolean) => {
+        // Immediately update the todo's completed status in local state
+        setItems(prevItems =>
+            prevItems.map(item =>
+                item.id === id ? { ...item, completed } : item
+            )
+        );
+    };
+
     const handleRandomPick = (e: React.MouseEvent) => {
         e.stopPropagation();
         const uncompletedItems = items.filter(item => !item.completed);
@@ -324,6 +333,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
                                             todo={todo}
                                             isHighlighted={selectedId === todo.id}
                                             onDelete={handleDeleteTodo}
+                                            onToggle={handleToggleTodo}
                                         />
                                     </div>
                                 </div>
