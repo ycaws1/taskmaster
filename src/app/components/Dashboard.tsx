@@ -28,7 +28,7 @@ export function Dashboard({ categories, user }: DashboardProps) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 text-zinc-900 dark:from-zinc-950 dark:to-black dark:text-zinc-50">
             {/* Header */}
-            <header className="sticky top-0 z-10 border-b border-zinc-200/50 bg-white/70 px-6 py-4 backdrop-blur-xl dark:border-zinc-800/50 dark:bg-black/70">
+            <header className="sticky top-0 z-10 border-b border-zinc-200/50 bg-white/70 px-4 py-3 backdrop-blur-xl dark:border-zinc-800/50 dark:bg-black/70 sm:px-6 sm:py-4">
                 <div className="mx-auto flex max-w-7xl items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/30">
@@ -45,8 +45,8 @@ export function Dashboard({ categories, user }: DashboardProps) {
                             <button
                                 onClick={() => setViewMode('grid')}
                                 className={`rounded-md p-1.5 transition-all ${viewMode === 'grid'
-                                        ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white'
-                                        : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+                                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white'
+                                    : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
                                     }`}
                             >
                                 <LayoutGrid className="h-4 w-4" />
@@ -54,8 +54,8 @@ export function Dashboard({ categories, user }: DashboardProps) {
                             <button
                                 onClick={() => setViewMode('list')}
                                 className={`rounded-md p-1.5 transition-all ${viewMode === 'list'
-                                        ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white'
-                                        : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+                                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white'
+                                    : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
                                     }`}
                             >
                                 <List className="h-4 w-4" />
@@ -81,15 +81,16 @@ export function Dashboard({ categories, user }: DashboardProps) {
             </header>
 
             {/* Main Content */}
-            <main className="mx-auto max-w-7xl p-6">
-                <div className="mb-8 flex items-center justify-between">
-                    <h2 className="text-2xl font-bold tracking-tight">Your Categories</h2>
+            <main className="mx-auto max-w-7xl p-4 sm:p-6">
+                <div className="mb-6 flex items-center justify-between sm:mb-8">
+                    <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Categories</h2>
                     <button
                         onClick={() => setShowAddCategory(!showAddCategory)}
-                        className="flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all hover:bg-indigo-700 hover:shadow-indigo-500/40 active:scale-95"
+                        className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all hover:bg-indigo-700 hover:shadow-indigo-500/40 active:scale-95 sm:gap-2 sm:px-4"
                     >
                         <Plus className="h-4 w-4" />
-                        New Category
+                        <span className="hidden sm:inline">New Category</span>
+                        <span className="sm:hidden">Add</span>
                     </button>
                 </div>
 

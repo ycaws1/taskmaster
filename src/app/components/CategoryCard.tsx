@@ -37,7 +37,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{category.name}</h3>
                 <button
                     onClick={() => deleteCategory(category.id)}
-                    className="text-zinc-400 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100 dark:text-zinc-500"
+                    className="rounded-lg p-1.5 text-zinc-400 transition-all hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 dark:text-zinc-500 dark:hover:bg-red-900/20"
                     title="Delete Category"
                 >
                     <Trash2 className="h-4 w-4" />

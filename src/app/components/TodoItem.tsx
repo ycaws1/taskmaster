@@ -71,7 +71,7 @@ export function TodoItem({ todo }: TodoItemProps) {
 
             <button
                 onClick={() => deleteTodo(todo.id)}
-                className="opacity-0 transition-opacity group-hover:opacity-100 text-red-500 hover:text-red-600"
+                className="rounded-lg p-1.5 text-red-500 transition-all hover:bg-red-50 hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-red-900/20"
             >
                 <Trash2 className="h-4 w-4" />
             </button>
