@@ -3,7 +3,6 @@
 import { toggleTodo, deleteTodo, updateTodoText } from '@/app/lib/actions';
 import { Trash2, CheckCircle, Circle } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { useFormStatus } from 'react-dom';
 
 interface TodoItemProps {
     todo: {
@@ -11,9 +10,10 @@ interface TodoItemProps {
         text: string;
         completed: boolean;
     };
+    isHighlighted?: boolean;
 }
 
-export function TodoItem({ todo }: TodoItemProps) {
+export function TodoItem({ todo, isHighlighted = false }: TodoItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [text, setText] = useState(todo.text);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -32,7 +32,10 @@ export function TodoItem({ todo }: TodoItemProps) {
     };
 
     return (
-        <div className="group flex items-center justify-between gap-3 rounded-lg bg-white/50 p-3 shadow-sm backdrop-blur-sm transition-all hover:bg-white/80 dark:bg-zinc-800/50 dark:hover:bg-zinc-800/80">
+        <div className={`group flex items-center justify-between gap-3 rounded-lg p-3 shadow-sm backdrop-blur-sm transition-all ${isHighlighted
+                ? 'bg-indigo-100 ring-2 ring-indigo-500 scale-[1.02] dark:bg-indigo-900/50'
+                : 'bg-white/50 hover:bg-white/80 dark:bg-zinc-800/50 dark:hover:bg-zinc-800/80'
+            }`}>
             <div className="flex flex-1 items-center gap-3">
                 <button
                     onClick={() => toggleTodo(todo.id, !todo.completed)}
@@ -61,7 +64,11 @@ export function TodoItem({ todo }: TodoItemProps) {
                 ) : (
                     <span
                         onClick={() => setIsEditing(true)}
-                        className={`cursor-pointer text-sm transition-all ${todo.completed ? 'text-zinc-400 function line-through' : 'text-zinc-900 dark:text-zinc-100'
+                        className={`cursor-pointer text-sm transition-all ${isHighlighted
+                                ? 'text-indigo-900 font-semibold dark:text-indigo-100'
+                                : todo.completed
+                                    ? 'text-zinc-400 line-through'
+                                    : 'text-zinc-900 dark:text-zinc-100'
                             }`}
                     >
                         {todo.text}

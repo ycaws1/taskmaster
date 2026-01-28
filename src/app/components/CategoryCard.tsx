@@ -2,7 +2,7 @@
 
 import { createTodo, deleteCategory } from '@/app/lib/actions';
 import { TodoItem } from './TodoItem';
-import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronRight, Shuffle } from 'lucide-react';
 import { useState } from 'react';
 
 interface CategoryCardProps {
@@ -21,6 +21,8 @@ export function CategoryCard({ category }: CategoryCardProps) {
     const [newTodo, setNewTodo] = useState('');
     const [isAdding, setIsAdding] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [isSpinning, setIsSpinning] = useState(false);
 
     const handleAddTodo = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -32,8 +34,40 @@ export function CategoryCard({ category }: CategoryCardProps) {
         setIsAdding(false);
     };
 
+    const handleRandomPick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const uncompletedItems = category.items.filter(item => !item.completed);
+        if (uncompletedItems.length === 0) return;
+
+        setIsSpinning(true);
+        setSelectedId(null);
+
+        // Animate through random items
+        let count = 0;
+        const maxCount = 10;
+        const interval = setInterval(() => {
+            const randomIndex = Math.floor(Math.random() * uncompletedItems.length);
+            setSelectedId(uncompletedItems[randomIndex].id);
+            count++;
+
+            if (count >= maxCount) {
+                clearInterval(interval);
+                setIsSpinning(false);
+                // Keep the final selection
+                const finalIndex = Math.floor(Math.random() * uncompletedItems.length);
+                setSelectedId(uncompletedItems[finalIndex].id);
+
+                // Clear selection after 3 seconds
+                setTimeout(() => {
+                    setSelectedId(null);
+                }, 3000);
+            }
+        }, 100);
+    };
+
     const completedCount = category.items.filter(item => item.completed).length;
     const totalCount = category.items.length;
+    const uncompletedCount = totalCount - completedCount;
 
     return (
         <div className="group flex flex-col rounded-xl border border-zinc-200 bg-zinc-50/50 shadow-sm backdrop-blur-md transition-all hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900/50">
@@ -57,16 +91,30 @@ export function CategoryCard({ category }: CategoryCardProps) {
                         {completedCount}/{totalCount}
                     </span>
                 </div>
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        deleteCategory(category.id);
-                    }}
-                    className="rounded-lg p-1.5 text-zinc-400 transition-all hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 dark:text-zinc-500 dark:hover:bg-red-900/20"
-                    title="Delete Category"
-                >
-                    <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                    {/* Random picker button */}
+                    <button
+                        onClick={handleRandomPick}
+                        disabled={uncompletedCount === 0 || isSpinning}
+                        className={`rounded-lg p-1.5 transition-all disabled:opacity-30 ${isSpinning
+                                ? 'animate-spin text-indigo-500'
+                                : 'text-zinc-400 hover:bg-indigo-50 hover:text-indigo-500 dark:text-zinc-500 dark:hover:bg-indigo-900/20'
+                            }`}
+                        title="Pick random task"
+                    >
+                        <Shuffle className="h-4 w-4" />
+                    </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            deleteCategory(category.id);
+                        }}
+                        className="rounded-lg p-1.5 text-zinc-400 transition-all hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 dark:text-zinc-500 dark:hover:bg-red-900/20"
+                        title="Delete Category"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </button>
+                </div>
             </div>
 
             {/* Content - Collapsible on mobile, always visible on desktop */}
@@ -79,7 +127,13 @@ export function CategoryCard({ category }: CategoryCardProps) {
                     {category.items.length === 0 ? (
                         <div className="py-4 text-center text-sm text-zinc-400 italic">No tasks yet</div>
                     ) : (
-                        category.items.map((todo) => <TodoItem key={todo.id} todo={todo} />)
+                        category.items.map((todo) => (
+                            <TodoItem
+                                key={todo.id}
+                                todo={todo}
+                                isHighlighted={selectedId === todo.id}
+                            />
+                        ))
                     )}
                 </div>
 
