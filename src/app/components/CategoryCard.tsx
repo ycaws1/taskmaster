@@ -66,12 +66,10 @@ export function CategoryCard({ category }: CategoryCardProps) {
     const dragCounter = useRef(0);
 
     // Sync items with props when category changes
-    const itemsKey = category.items.map(i => i.id).join(',');
-    const [prevItemsKey, setPrevItemsKey] = useState(itemsKey);
-    if (itemsKey !== prevItemsKey) {
-        setPrevItemsKey(itemsKey);
+    // Sync items with props when category changes
+    useEffect(() => {
         setItems(category.items);
-    }
+    }, [category.items]);
 
     const handleAddTodo = async (e: React.FormEvent) => {
         e.preventDefault();

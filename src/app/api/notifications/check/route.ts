@@ -60,6 +60,11 @@ export async function GET() {
                 url: '/'
             });
 
+
+            // Track delivery status
+            let successCount = 0;
+            let permanentFailCount = 0;
+
             // Send to all subscribers
             const promises = subscriptions.map(sub => {
                 return webPush.sendNotification({
@@ -68,23 +73,32 @@ export async function GET() {
                         p256dh: sub.p256dh,
                         auth: sub.auth
                     }
-                }, payload).catch(async (err) => {
-                    console.error('Error sending push:', err);
-                    if (err.statusCode === 410 || err.statusCode === 404) {
-                        await prisma.pushSubscription.delete({ where: { id: sub.id } });
-                    }
-                });
+                }, payload)
+                    .then(() => {
+                        successCount++;
+                    })
+                    .catch(async (err) => {
+                        console.error('Error sending push:', err);
+                        if (err.statusCode === 410 || err.statusCode === 404) {
+                            await prisma.pushSubscription.delete({ where: { id: sub.id } });
+                            permanentFailCount++;
+                        }
+                        // Other errors (5xx, network) are transient, we don't count them as permanent failure
+                    });
             });
 
             await Promise.all(promises);
 
-            // Mark as sent instead of clearing date
-            await prisma.todoItem.update({
-                where: { id: item.id },
-                data: { notificationSent: true }
-            });
-
-            notificationsSentIds.push(item.id);
+            // Mark as sent ONLY if we sent to at least one person, 
+            // OR if all subscribers are dead (permanent fail) so we don't retry locally forever.
+            // If we had transient errors (like quota exceeded or temp server error), we should NOT mark as sent so it retries.
+            if (successCount > 0 || permanentFailCount === subscriptions.length) {
+                await prisma.todoItem.update({
+                    where: { id: item.id },
+                    data: { notificationSent: true }
+                });
+                notificationsSentIds.push(item.id);
+            }
         }
 
         return NextResponse.json({

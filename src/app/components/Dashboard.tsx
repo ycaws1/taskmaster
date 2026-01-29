@@ -4,7 +4,7 @@ import { createCategory, reorderCategories } from '@/app/lib/actions';
 import { CategoryCard } from './CategoryCard';
 import { NotificationManager } from './NotificationManager';
 import { Plus, LogOut, LayoutGrid, List, GripVertical } from 'lucide-react';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
 
 interface Category {
@@ -34,12 +34,9 @@ export function Dashboard({ categories: initialCategories, user }: DashboardProp
     const dragCounter = useRef(0);
 
     // Sync with server-side categories when they change
-    const categoriesKey = initialCategories.map(c => c.id).join(',');
-    const [prevCategoriesKey, setPrevCategoriesKey] = useState(categoriesKey);
-    if (categoriesKey !== prevCategoriesKey) {
-        setPrevCategoriesKey(categoriesKey);
+    useEffect(() => {
         setCategories(initialCategories);
-    }
+    }, [initialCategories]);
 
     const handleCreateCategory = async (e: React.FormEvent) => {
         e.preventDefault();

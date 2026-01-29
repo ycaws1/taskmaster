@@ -113,7 +113,30 @@ export function NotificationManager() {
     if (!isSupported) return null;
 
     if (permission === 'granted' && subscription) {
-        return null; // Already setup
+        return (
+            <div className="fixed bottom-4 left-4 z-50">
+                <button
+                    onClick={async () => {
+                        try {
+                            const res = await fetch('/api/notifications/test', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ subscription }),
+                            });
+                            if (!res.ok) throw new Error('Failed to send');
+                            // Visual feedback could be added here
+                        } catch (e) {
+                            console.error('Test failed', e);
+                            alert('Failed to send test notification. Check console.');
+                        }
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 shadow-md hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400"
+                    title="Test Notification"
+                >
+                    <Bell className="h-4 w-4" />
+                </button>
+            </div>
+        );
     }
 
     return (
