@@ -142,14 +142,7 @@ export function NotificationManager() {
                 >
                     Allow
                 </button>
-                <button
-                    onClick={() => {
-                        fetch('/api/notifications/check').then(res => res.json()).then(data => console.log('Test Check:', data));
-                    }}
-                    className="ml-2 rounded-lg bg-zinc-100 px-3 py-2 text-xs font-semibold text-zinc-900 shadow-sm hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-600"
-                >
-                    Test
-                </button>
+
                 <button
                     onClick={() => setIsSupported(false)} // Dismiss for session
                     className="ml-2 rounded-lg p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
