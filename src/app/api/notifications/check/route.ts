@@ -60,6 +60,8 @@ export async function GET() {
                 url: '/'
             });
 
+            console.log('Sending notification payload:', payload);
+
 
             // Track delivery status
             let successCount = 0;

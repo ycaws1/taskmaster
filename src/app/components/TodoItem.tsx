@@ -53,10 +53,26 @@ export function TodoItem({ todo, isHighlighted = false, onDelete, onToggle }: To
     }, [todo.completed]);
 
     const [notificationAt, setNotificationAt] = useState(todo.notificationAt);
+    const [isExpired, setIsExpired] = useState(false);
 
     useEffect(() => {
         setNotificationAt(todo.notificationAt);
     }, [todo.notificationAt]);
+
+    // Check expiry every minute
+    useEffect(() => {
+        const checkExpiry = () => {
+            if (notificationAt) {
+                setIsExpired(new Date(notificationAt) < new Date());
+            } else {
+                setIsExpired(false);
+            }
+        };
+
+        checkExpiry(); // Check immediately
+        const interval = setInterval(checkExpiry, 60000); // Check every minute
+        return () => clearInterval(interval);
+    }, [notificationAt]);
 
     const handleUpdate = async () => {
         setIsEditing(false);
@@ -144,7 +160,7 @@ export function TodoItem({ todo, isHighlighted = false, onDelete, onToggle }: To
                         </div>
                         {/* Notification Indicator */}
                         {notificationAt && (
-                            <div className={`flex items-center gap-1 text-[10px] font-medium ${new Date(notificationAt) < new Date() ? 'text-zinc-400 line-through' : 'text-indigo-500'
+                            <div className={`flex items-center gap-1 text-[10px] font-medium ${isExpired ? 'text-zinc-400 line-through' : 'text-indigo-500'
                                 }`}>
                                 <Calendar className="h-3 w-3" />
                                 <NotificationTime date={notificationAt} />
