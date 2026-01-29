@@ -59,8 +59,13 @@ export function NotificationManager() {
     async function registerServiceWorker() {
         try {
             // In development, Next-PWA is disabled to prevent loops, so we register our SW manually
+            // We use the main sw.js which imports push-sw.js
+            // This ensures we share the same registration for PWA features and Push
             if (process.env.NODE_ENV === 'development') {
-                await navigator.serviceWorker.register('/push-sw.js');
+                // In dev, sometimes next-pwa doesn't register auto, so we do it
+                // But we use sw.js, NOT push-sw.js
+                const reg = await navigator.serviceWorker.register('/sw.js');
+                console.log('Service Worker registered in dev with scope:', reg.scope);
             }
 
             const registration = await navigator.serviceWorker.ready;
