@@ -123,8 +123,9 @@ export function Dashboard({ categories: initialCategories, user }: DashboardProp
     return (
         <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 text-zinc-900 dark:from-zinc-950 dark:to-black dark:text-zinc-50">
             {/* Header */}
-            <header className="sticky top-0 z-10 border-b border-zinc-200/50 bg-white/70 px-4 py-3 backdrop-blur-xl dark:border-zinc-800/50 dark:bg-black/70 sm:px-6 sm:py-4">
-                <div className="mx-auto flex max-w-7xl items-center justify-between">
+            {/* Header */}
+            <header className="sticky top-0 z-10 border-b border-zinc-200/50 bg-white/70 pt-safe backdrop-blur-xl dark:border-zinc-800/50 dark:bg-black/70">
+                <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/30">
                             <span className="text-xl font-bold">T</span>

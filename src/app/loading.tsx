@@ -9,7 +9,7 @@ export default function Loading() {
             </div>
 
             {/* Top progress bar with neon effect */}
-            <div className="fixed top-0 left-0 right-0 h-1 bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+            <div className="fixed top-safe left-0 right-0 h-1 bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
                 <div
                     className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 shadow-[0_0_8px_rgba(79,70,229,0.8)] animate-loading-bar"
                     style={{
