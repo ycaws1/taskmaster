@@ -28,7 +28,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     callbacks: {
         authorized: async ({ auth }) => {
-            console.log("Middleware authorized callback. User:", auth?.user?.email);
             return !!auth
         },
     },

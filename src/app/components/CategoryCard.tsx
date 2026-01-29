@@ -10,6 +10,7 @@ interface TodoItemType {
     text: string;
     completed: boolean;
     order: number;
+    notificationAt?: string | null;
 }
 
 interface CategoryCardProps {

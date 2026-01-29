@@ -27,6 +27,7 @@ async function DashboardData({ user }: { user: any }) {
       text: item.text,
       completed: item.completed,
       order: (item as any).order ?? 0,
+      notificationAt: item.notificationAt ? item.notificationAt.toISOString() : null,
       createdAt: item.createdAt.toISOString(),
       updatedAt: item.updatedAt.toISOString(),
     }))

@@ -2,6 +2,7 @@
 
 import { createCategory, reorderCategories } from '@/app/lib/actions';
 import { CategoryCard } from './CategoryCard';
+import { NotificationManager } from './NotificationManager';
 import { Plus, LogOut, LayoutGrid, List, GripVertical } from 'lucide-react';
 import { useState, useRef, useCallback } from 'react';
 import { signOut } from 'next-auth/react';
@@ -260,6 +261,7 @@ export function Dashboard({ categories: initialCategories, user }: DashboardProp
                     )}
                 </div>
             </main>
+            <NotificationManager />
         </div>
     );
 }

@@ -92,6 +92,7 @@ export async function createTodo(text: string, categoryId: string) {
         text: newTodo.text,
         completed: newTodo.completed,
         order: newTodo.order,
+        notificationAt: newTodo.notificationAt ? newTodo.notificationAt.toISOString() : null,
     }
 }
 
@@ -129,4 +130,40 @@ export async function updateTodoText(id: string, text: string) {
         data: { text },
     })
     revalidatePath('/')
+}
+
+export async function updateTodoNotification(id: string, notificationAt: Date | null) {
+    await prisma.todoItem.update({
+        where: { id },
+        data: {
+            notificationAt: notificationAt,
+            notificationSent: false
+        },
+    })
+    revalidatePath('/')
+}
+
+export async function subscribeUser(sub: any) {
+    if (!sub || !sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
+        return; // Invalid subscription
+    }
+
+    try {
+        // Upsert to ensure we have the latest or create new
+        const exists = await prisma.pushSubscription.findUnique({
+            where: { endpoint: sub.endpoint }
+        });
+
+        if (!exists) {
+            await prisma.pushSubscription.create({
+                data: {
+                    endpoint: sub.endpoint,
+                    p256dh: sub.keys.p256dh,
+                    auth: sub.keys.auth,
+                },
+            });
+        }
+    } catch (e) {
+        console.error('Subscription error:', e);
+    }
 }

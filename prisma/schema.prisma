@@ -30,6 +30,17 @@ model TodoItem {
   order      Int      @default(0)
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  notificationAt   DateTime?
+  notificationSent Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
