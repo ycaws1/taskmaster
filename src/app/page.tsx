@@ -3,11 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Dashboard } from "./components/Dashboard";
 import { Category, TodoItem } from "@prisma/client";
+import { Suspense } from "react";
+import Loading from "./loading";
 
-export default async function Home() {
-  const session = await auth();
-  if (!session) redirect("/login");
-
+async function DashboardData({ user }: { user: any }) {
   const categories = await prisma.category.findMany({
     include: {
       items: {
@@ -33,9 +32,18 @@ export default async function Home() {
     }))
   }));
 
+  return <Dashboard categories={serializedCategories} user={user} />;
+}
+
+export default async function Home() {
+  const session = await auth();
+  if (!session) redirect("/login");
+
   return (
     <main>
-      <Dashboard categories={serializedCategories} user={session.user} />
+      <Suspense fallback={<Loading />}>
+        <DashboardData user={session.user} />
+      </Suspense>
     </main>
   );
 }
