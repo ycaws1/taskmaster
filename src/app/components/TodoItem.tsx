@@ -70,7 +70,7 @@ export function TodoItem({ todo, isHighlighted = false, onDelete, onToggle }: To
         };
 
         checkExpiry(); // Check immediately
-        const interval = setInterval(checkExpiry, 60000); // Check every minute
+        const interval = setInterval(checkExpiry, 1000); // Check every second
         return () => clearInterval(interval);
     }, [notificationAt]);
 
