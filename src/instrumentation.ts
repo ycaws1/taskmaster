@@ -14,6 +14,6 @@ export async function register() {
             } catch (error) {
                 console.error('Scheduled notification check failed:', error);
             }
-        }, 10000); // Check every 10 seconds
+        }, 30000); // Check every 30 seconds
     }
 }
