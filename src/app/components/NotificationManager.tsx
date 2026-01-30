@@ -35,8 +35,6 @@ export function NotificationManager() {
     }, []);
 
     // Poll for notifications every 30 seconds
-    // NOTE: In production (Vercel), we also use a Cron Job (vercel.json) to hit the check endpoint.
-    // This polling here ensures it works if the app is open and Cron isn't set up (e.g. dev/localhost).
     useEffect(() => {
         const interval = setInterval(async () => {
             if (permission === 'granted') {
@@ -124,17 +122,26 @@ export function NotificationManager() {
             <div className="fixed bottom-4 left-4 z-50">
                 <button
                     onClick={async () => {
+                        console.log("Test button clicked");
+                        alert("Clicked! Sending test notification...");
                         try {
+                            const payload = { subscription: subscription.toJSON() };
+                            console.log("Sending payload:", payload);
+
                             const res = await fetch('/api/notifications/test', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ subscription }),
+                                body: JSON.stringify(payload),
                             });
-                            if (!res.ok) throw new Error('Failed to send');
-                            // Visual feedback could be added here
-                        } catch (e) {
+
+                            const data = await res.json();
+                            console.log("Server response:", res.status, data);
+
+                            if (!res.ok) throw new Error(data.error || 'Failed to send');
+                            alert('Server said: Sent! Check your notification center.');
+                        } catch (e: any) {
                             console.error('Test failed', e);
-                            alert('Failed to send test notification. Check console.');
+                            alert('Error: ' + e.message);
                         }
                     }}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 shadow-md hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400"

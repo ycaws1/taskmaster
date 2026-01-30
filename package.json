@@ -7,7 +7,9 @@
     "build": "next build --webpack",
     "postinstall": "prisma generate",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "worker": "tsx scripts/worker.ts",
+    "start:all": "concurrently \"npm start\" \"npm run worker\""
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -21,7 +23,9 @@
     "react-dom": "19.2.3",
     "swr": "^2.3.8",
     "tailwind-merge": "^3.4.0",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
