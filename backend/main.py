@@ -20,6 +20,7 @@ if DATABASE_URL:
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
 VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@taskmaster-ochre-three.vercel.app")
 POLL_INTERVAL = 5  # seconds
+CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",")] if os.getenv("CORS_ORIGINS") else ["*"]
 
 # Logging setup
 logging.basicConfig(
@@ -161,7 +162,7 @@ if VAPID_PRIVATE_KEY:
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://taskmaster-ochre-three.vercel.app/"], # Allow all for now to avoid CORS issues between Vercel and Render
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -231,14 +232,22 @@ async def test_notification(data: NotificationTest):
             }
         }
 
-        webpush(
+        # ... (inside test_notification)
+        response = webpush(
             subscription_info=subscription_info,
             data=payload,
             vapid_private_key=VAPID_PRIVATE_KEY,
             vapid_claims={"sub": VAPID_SUBJECT}
         )
-        return {"status": "success", "message": "Notification sent"}
+        
+        # Log the push service response code (Google/Apple)
+        status = response.status_code if hasattr(response, 'status_code') else "Unknown"
+        logger.info(f"Push Service Response: {status}")
+        
+        return {"status": "success", "message": f"Notification sent (Status: {status})"}
     except Exception as e:
+        # ... rest of catch
+
         logger.error(f"Test push error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

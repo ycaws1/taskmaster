@@ -1,17 +1,21 @@
 self.addEventListener('push', function (event) {
-    console.log('[Service Worker] Push Received.', event.data);
+    console.log('[Service Worker] Push Received.', event);
 
-    if (!event.data) {
-        console.log('[Service Worker] No data in push event');
-        return;
-    }
+    let data = {
+        title: 'New Notification',
+        body: 'You have a new alert.',
+        icon: '/android-chrome-192x192.png',
+        url: '/'
+    };
 
-    let data;
-    try {
-        data = event.data.json();
-    } catch (e) {
-        console.error('[Service Worker] Error parsing push data', e);
-        data = { title: 'Notification', body: event.data.text() };
+    if (event.data) {
+        try {
+            const json = event.data.json();
+            data = { ...data, ...json };
+        } catch (e) {
+            console.warn('[Service Worker] Push data was not JSON, using as text', e);
+            data.body = event.data.text();
+        }
     }
 
     console.log('[Service Worker] Push data:', data);
