@@ -153,10 +153,15 @@ from typing import Optional
 
 app = FastAPI(lifespan=lifespan, title="Taskmaster Notification Server")
 
+# Log VAPID status on startup
+logger.info(f"VAPID Private Key loaded: {'Yes' if VAPID_PRIVATE_KEY else 'NO'}")
+if VAPID_PRIVATE_KEY:
+    logger.info(f"VAPID Private Key start: {VAPID_PRIVATE_KEY[:5]}...")
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://taskmaster-vsre.onrender.com"], # In development, allow all
+    allow_origins=["https://taskmaster-ochre-three.vercel.app/"], # Allow all for now to avoid CORS issues between Vercel and Render
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -208,8 +213,10 @@ async def clear_subscriptions():
 @app.post("/test")
 async def test_notification(data: NotificationTest):
     """Send a test notification to a specific subscription."""
+    logger.info(f"Test notification request for endpoint: {data.subscription.get('endpoint')[:50]}...")
     try:
         payload = json.dumps({
+
             "title": data.title,
             "body": data.body,
             "icon": "/android-chrome-192x192.png",
