@@ -156,7 +156,7 @@ app = FastAPI(lifespan=lifespan, title="Taskmaster Notification Server")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In development, allow all
+    allow_origins=["https://taskmaster-vsre.onrender.com"], # In development, allow all
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
