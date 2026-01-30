@@ -35,6 +35,8 @@ export function NotificationManager() {
     }, []);
 
     // Poll for notifications every 30 seconds
+    // NOTE: In production (Vercel), we also use a Cron Job (vercel.json) to hit the check endpoint.
+    // This polling here ensures it works if the app is open and Cron isn't set up (e.g. dev/localhost).
     useEffect(() => {
         const interval = setInterval(async () => {
             if (permission === 'granted') {

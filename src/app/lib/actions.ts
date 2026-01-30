@@ -149,20 +149,18 @@ export async function subscribeUser(sub: any) {
     }
 
     try {
-        // Upsert to ensure we have the latest or create new
-        const exists = await prisma.pushSubscription.findUnique({
-            where: { endpoint: sub.endpoint }
+        await prisma.pushSubscription.upsert({
+            where: { endpoint: sub.endpoint },
+            update: {
+                p256dh: sub.keys.p256dh,
+                auth: sub.keys.auth,
+            },
+            create: {
+                endpoint: sub.endpoint,
+                p256dh: sub.keys.p256dh,
+                auth: sub.keys.auth,
+            }
         });
-
-        if (!exists) {
-            await prisma.pushSubscription.create({
-                data: {
-                    endpoint: sub.endpoint,
-                    p256dh: sub.keys.p256dh,
-                    auth: sub.keys.auth,
-                },
-            });
-        }
     } catch (e) {
         console.error('Subscription error:', e);
     }

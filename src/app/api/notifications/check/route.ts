@@ -51,8 +51,13 @@ export async function GET() {
         }
 
         const notificationsSentIds = [];
+        const subscriptionsToDelete = new Set<string>();
 
+        // We process items sequentially to ensure DB updates don't conflict, 
+        // though parallel is possible, sequential is safer for now.
         for (const item of dueItems) {
+            let itemSentCount = 0;
+
             const payload = JSON.stringify({
                 title: `Task Due: ${item.text}`,
                 body: `Your task in "${item.category.name}" is due now!`,
@@ -60,53 +65,55 @@ export async function GET() {
                 url: '/'
             });
 
-            console.log('Sending notification payload:', payload);
+            console.log('Sending notification payload:', payload, 'to', subscriptions.length, 'subscribers');
 
-
-            // Track delivery status
-            let successCount = 0;
-            let permanentFailCount = 0;
-
-            // Send to all subscribers
-            const promises = subscriptions.map(sub => {
-                return webPush.sendNotification({
-                    endpoint: sub.endpoint,
-                    keys: {
-                        p256dh: sub.p256dh,
-                        auth: sub.auth
-                    }
-                }, payload)
-                    .then(() => {
-                        successCount++;
-                    })
-                    .catch(async (err) => {
-                        console.error('Error sending push:', err);
-                        if (err.statusCode === 410 || err.statusCode === 404) {
-                            await prisma.pushSubscription.delete({ where: { id: sub.id } });
-                            permanentFailCount++;
+            const sendPromises = subscriptions.map(async (sub) => {
+                try {
+                    await webPush.sendNotification({
+                        endpoint: sub.endpoint,
+                        keys: {
+                            p256dh: sub.p256dh,
+                            auth: sub.auth
                         }
-                        // Other errors (5xx, network) are transient, we don't count them as permanent failure
-                    });
+                    }, payload);
+                    itemSentCount++;
+                } catch (err: any) {
+                    console.error('Error sending push to', sub.id, err.statusCode);
+                    if (err.statusCode === 410 || err.statusCode === 404) {
+                        subscriptionsToDelete.add(sub.id);
+                    }
+                    // Swallow other errors to allow other notifications to proceed
+                }
             });
 
-            await Promise.all(promises);
+            await Promise.all(sendPromises);
 
-            // Mark as sent ONLY if we sent to at least one person, 
-            // OR if all subscribers are dead (permanent fail) so we don't retry locally forever.
-            // If we had transient errors (like quota exceeded or temp server error), we should NOT mark as sent so it retries.
-            if (successCount > 0 || permanentFailCount === subscriptions.length) {
-                await prisma.todoItem.update({
-                    where: { id: item.id },
-                    data: { notificationSent: true }
-                });
-                notificationsSentIds.push(item.id);
-            }
+            // Mark as sent if we attempted to send to everyone.
+            // Even if nobody successfully received it (e.g. all expired), we should mark it as processed
+            // to prevent infinite retries on dead subscriptions.
+            // Use update many if needed, but here we update one by one.
+            await prisma.todoItem.update({
+                where: { id: item.id },
+                data: { notificationSent: true }
+            });
+            notificationsSentIds.push(item.id);
+        }
+
+        // Cleanup dead subscriptions
+        if (subscriptionsToDelete.size > 0) {
+            console.log('Cleaning up', subscriptionsToDelete.size, 'expired subscriptions');
+            await prisma.pushSubscription.deleteMany({
+                where: {
+                    id: { in: Array.from(subscriptionsToDelete) }
+                }
+            });
         }
 
         return NextResponse.json({
             success: true,
             sentCount: notificationsSentIds.length,
-            items: notificationsSentIds
+            items: notificationsSentIds,
+            cleanedSubscriptions: subscriptionsToDelete.size
         });
 
     } catch (error) {
