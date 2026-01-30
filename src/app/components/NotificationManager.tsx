@@ -24,6 +24,8 @@ export function NotificationManager() {
     const [isSupported, setIsSupported] = useState(false);
     const [subscription, setSubscription] = useState<PushSubscription | null>(null);
     const [permission, setPermission] = useState<NotificationPermission>('default');
+    const [error, setError] = useState<string>('');
+    const [status, setStatus] = useState<string>('');
     const router = useRouter();
 
     useEffect(() => {
@@ -34,81 +36,82 @@ export function NotificationManager() {
         }
     }, []);
 
-    // Poll for notifications every 30 seconds
-    useEffect(() => {
-        const interval = setInterval(async () => {
-            if (permission === 'granted') {
-                try {
-                    const res = await fetch('/api/notifications/check');
-                    const data = await res.json();
-                    if (data.success && data.sentCount > 0) {
-                        console.log('Notifications sent, refreshing UI');
-                        router.refresh();
-                    }
-                } catch (error) {
-                    console.error('Notification check failed', error);
-                }
-            }
-        }, 30000); // Check every 30s
-
-        return () => clearInterval(interval);
-    }, [permission, router]);
+    // Poll for notifications logic removed. Python backend handles this.
+    // We can just rely on the service worker to receive push messages.
 
     // ... (rest of the component)
 
     async function registerServiceWorker() {
+        setStatus('Initializing SW...');
         try {
-            // In development, Next-PWA is disabled to prevent loops, so we register our SW manually
-            // We use the main sw.js which imports push-sw.js
-            // This ensures we share the same registration for PWA features and Push
-            if (process.env.NODE_ENV === 'development') {
-                // In dev, sometimes next-pwa doesn't register auto, so we do it
-                // But we use sw.js, NOT push-sw.js
-                const reg = await navigator.serviceWorker.register('/sw.js');
-                console.log('Service Worker registered in dev with scope:', reg.scope);
-            }
+            const swUrl = process.env.NODE_ENV === 'development' ? '/push-sw.js' : '/sw.js';
+            console.log('Registering service worker:', swUrl);
 
-            const registration = await navigator.serviceWorker.ready;
+            const reg = await navigator.serviceWorker.register(swUrl);
+            console.log('Service Worker registered with scope:', reg.scope);
+
+            // Wait for service worker to be ready with a timeout
+            const readyPromise = navigator.serviceWorker.ready;
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Service Worker ready timeout')), 10000)
+            );
+
+            setStatus('Waiting for SW ready...');
+            const registration = await Promise.race([readyPromise, timeoutPromise]) as ServiceWorkerRegistration;
+
             const sub = await registration.pushManager.getSubscription();
             if (sub) {
                 setSubscription(sub);
-                // Optionally re-sync with server here
                 await subscribeToPush(sub);
+            } else if (Notification.permission === 'granted') {
+                await subscribeToPush();
             }
         } catch (error) {
             console.error('Error checking subscription:', error);
+            setError('SW Setup Failed: ' + (error instanceof Error ? error.message : String(error)));
+            setStatus('Failed.');
         }
     }
 
     async function subscribeToPush(existingSub?: PushSubscription) {
+        setError('');
+        setStatus('Starting...');
         try {
-            const registration = await navigator.serviceWorker.ready;
+            setStatus('Connecting to SW...');
+            const registration = await Promise.race([
+                navigator.serviceWorker.ready,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 10000))
+            ]) as ServiceWorkerRegistration;
             let sub = existingSub;
 
             if (!sub) {
+                setStatus('Checking VAPID key...');
                 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
                 if (!vapidPublicKey) {
-                    console.error('No VAPID public key found');
-                    return;
+                    throw new Error('No VAPID public key found');
                 }
 
+                setStatus('Subscribing with PushManager...');
                 sub = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
                 });
             }
 
+            setStatus('Updating state...');
             setSubscription(sub);
             setPermission('granted');
 
-            // Send to server
-            // Need to JSONify safely
+            setStatus('Sending to server...');
             const subJson = sub.toJSON();
             await subscribeUser(subJson);
 
+            setStatus('Done!');
             console.log('Subscribed successfully!');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to subscribe:', error);
+            setStatus('Failed.');
+            setError(error.message || String(error));
             if (Notification.permission === 'denied') {
                 setPermission('denied');
             }
@@ -123,7 +126,6 @@ export function NotificationManager() {
                 <button
                     onClick={async () => {
                         console.log("Test button clicked");
-                        alert("Clicked! Sending test notification...");
                         try {
                             const payload = { subscription: subscription.toJSON() };
                             console.log("Sending payload:", payload);
@@ -138,10 +140,9 @@ export function NotificationManager() {
                             console.log("Server response:", res.status, data);
 
                             if (!res.ok) throw new Error(data.error || 'Failed to send');
-                            alert('Server said: Sent! Check your notification center.');
+                            console.log('Server said: Sent! Check your notification center.');
                         } catch (e: any) {
                             console.error('Test failed', e);
-                            alert('Error: ' + e.message);
                         }
                     }}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 shadow-md hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400"
@@ -152,6 +153,28 @@ export function NotificationManager() {
             </div>
         );
     }
+
+    if (permission === 'granted' && !subscription) {
+        return (
+            <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-800 shadow-lg ring-1 ring-red-200 dark:bg-red-900/20 dark:text-red-300 dark:ring-red-800">
+                <div className="flex items-center gap-2">
+                    <span>Connection failed.</span>
+                    <button
+                        onClick={() => subscribeToPush()}
+                        className="font-semibold underline hover:text-red-600 dark:hover:text-red-200"
+                    >
+                        Retry
+                    </button>
+                </div>
+                {status && <div className="text-[10px] opacity-75">{status}</div>}
+                {error && <div className="font-mono text-[10px] opacity-75 break-all max-w-[250px]">{error}</div>}
+            </div>
+        );
+    }
+
+
+    // Don't show banner if already granted (even if subscription is missing/failed) or denied
+    if (permission !== 'default') return null;
 
     return (
         <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-4">
