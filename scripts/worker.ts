@@ -108,4 +108,4 @@ async function checkNotifications() {
 
 // Run immediately then every 60 seconds
 checkNotifications();
-setInterval(checkNotifications, 10000);
+setInterval(checkNotifications, 5000);
