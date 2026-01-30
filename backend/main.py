@@ -19,7 +19,7 @@ if DATABASE_URL:
 
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
 VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@taskmaster-ochre-three.vercel.app")
-POLL_INTERVAL = 10  # seconds
+POLL_INTERVAL = 5  # seconds
 
 # Logging setup
 logging.basicConfig(
@@ -143,7 +143,29 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         logger.info("Worker task cancelled.")
 
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
+
+# ... (rest of imports)
+
+# ... (rest of config)
+
 app = FastAPI(lifespan=lifespan, title="Taskmaster Notification Server")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In development, allow all
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class NotificationTest(BaseModel):
+    subscription: dict
+    title: Optional[str] = "Test Notification"
+    body: Optional[str] = "If you see this, notifications are working!"
 
 @app.get("/")
 async def root():
@@ -183,11 +205,42 @@ async def clear_subscriptions():
         if conn:
             conn.close()
 
+@app.post("/test")
+async def test_notification(data: NotificationTest):
+    """Send a test notification to a specific subscription."""
+    try:
+        payload = json.dumps({
+            "title": data.title,
+            "body": data.body,
+            "icon": "/android-chrome-192x192.png",
+            "url": "/"
+        })
+
+        subscription_info = {
+            "endpoint": data.subscription['endpoint'],
+            "keys": {
+                "p256dh": data.subscription['keys']['p256dh'],
+                "auth": data.subscription['keys']['auth']
+            }
+        }
+
+        webpush(
+            subscription_info=subscription_info,
+            data=payload,
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims={"sub": VAPID_SUBJECT}
+        )
+        return {"status": "success", "message": "Notification sent"}
+    except Exception as e:
+        logger.error(f"Test push error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/trigger")
 async def trigger_notifications(background_tasks: BackgroundTasks):
     """Manually trigger a notification cycle."""
     background_tasks.add_task(run_notification_cycle)
     return {"status": "queued", "message": "Notification cycle triggered"}
+
 
 if __name__ == "__main__":
     import uvicorn

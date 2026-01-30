@@ -14,48 +14,31 @@ if (vapidPublicKey && vapidPrivateKey) {
 }
 
 
-export async function POST(request: Request) {
-    console.log("Test notification endpoint called");
+const NOTIFICATION_SERVER_URL = process.env.NOTIFICATION_SERVER_URL || 'http://localhost:8000';
 
-    if (!vapidPublicKey || !vapidPrivateKey) {
-        console.error("VAPID keys missing:", {
-            hasPublic: !!vapidPublicKey,
-            hasPrivate: !!vapidPrivateKey
-        });
-        return NextResponse.json({ error: "VAPID keys not configured" }, { status: 500 });
-    }
+export async function POST(request: Request) {
+    console.log("Next.js Proxy: Test notification endpoint called");
 
     try {
         const body = await request.json();
-        const { subscription } = body;
 
-        console.log("Received subscription:", subscription ? "Yes" : "No");
+        // Proxy the request to the FastAPI server
+        const backendRes = await fetch(`${NOTIFICATION_SERVER_URL}/test`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
 
-        if (!subscription || !subscription.endpoint) {
-            console.error("Invalid subscription payload:", body);
-            return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
+        const data = await backendRes.json();
+
+        if (!backendRes.ok) {
+            console.error("Backend error:", data);
+            return NextResponse.json(data, { status: backendRes.status });
         }
 
-        console.log("Sending test notification to:", subscription.endpoint.slice(0, 30) + "...");
-
-        const payload = JSON.stringify({
-            title: "Test Notification",
-            body: "If you see this, notifications are working!",
-            icon: "/android-chrome-192x192.png",
-            url: "/"
-        });
-
-        const result = await webPush.sendNotification(subscription, payload);
-        console.log("Notification sent successfully status:", result.statusCode);
-
-        return NextResponse.json({ success: true, result });
+        return NextResponse.json(data);
     } catch (error: any) {
-        console.error("Test notification error:", error);
-        console.error("Error details:", {
-            statusCode: error.statusCode,
-            headers: error.headers,
-            body: error.body
-        });
-        return NextResponse.json({ error: "Failed to send notification", details: String(error) }, { status: 500 });
+        console.error("Proxy error:", error);
+        return NextResponse.json({ error: "Failed to connect to notification server", details: String(error) }, { status: 502 });
     }
 }
