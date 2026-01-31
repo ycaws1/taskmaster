@@ -178,7 +178,7 @@ export function TodoItem({ todo, isHighlighted = false, onDelete, onToggle }: To
 
             <div className="flex items-center gap-1">
                 {/* Notification Dropdown/Picker */}
-                <div className="relative group/notif">
+                <div className="relative group/notif overflow-hidden">
                     <button className="rounded-lg p-1.5 text-zinc-400 transition-all hover:bg-indigo-50 hover:text-indigo-500 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-indigo-900/20">
                         <Bell className={`h-4 w-4 ${notificationAt ? 'fill-indigo-500 text-indigo-500' : ''}`} />
                     </button>
@@ -193,7 +193,7 @@ export function TodoItem({ todo, isHighlighted = false, onDelete, onToggle }: To
                 <button
                     onClick={handleDelete}
                     disabled={isDeleting}
-                    className="rounded-lg p-1.5 text-red-500 transition-all hover:bg-red-50 hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-red-900/20 disabled:opacity-50"
+                    className="relative z-10 rounded-lg p-1.5 text-red-500 transition-all hover:bg-red-50 hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-red-900/20 disabled:opacity-50"
                 >
                     {isDeleting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
