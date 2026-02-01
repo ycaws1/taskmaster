@@ -118,35 +118,34 @@ export function NotificationManager() {
         }
     }
 
+    async function resetSubscription() {
+        setError('');
+        setStatus('Resetting...');
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const sub = await registration.pushManager.getSubscription();
+            if (sub) {
+                await sub.unsubscribe();
+            }
+            setSubscription(null);
+            await subscribeToPush();
+            console.log('Subscription reset successfully');
+        } catch (error: any) {
+            console.error('Reset failed:', error);
+            setError('Reset Failed: ' + (error.message || String(error)));
+            setStatus('Failed.');
+        }
+    }
+
     if (!isSupported) return null;
 
     if (permission === 'granted' && subscription) {
         return (
             <div className="fixed bottom-4 left-4 z-50">
                 <button
-                    onClick={async () => {
-                        console.log("Test button clicked");
-                        try {
-                            const payload = { subscription: subscription.toJSON() };
-                            console.log("Sending payload:", payload);
-
-                            const res = await fetch('/api/notifications/test', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload),
-                            });
-
-                            const data = await res.json();
-                            console.log("Server response:", res.status, data);
-
-                            if (!res.ok) throw new Error(data.error || 'Failed to send');
-                            console.log('Server said: Sent! Check your notification center.');
-                        } catch (e: any) {
-                            console.error('Test failed', e);
-                        }
-                    }}
+                    onClick={resetSubscription}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 shadow-md hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400"
-                    title="Test Notification"
+                    title="Reset Notification Subscription"
                 >
                     <Bell className="h-4 w-4" />
                 </button>
